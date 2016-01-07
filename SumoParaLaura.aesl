@@ -1,0 +1,177 @@
+<!DOCTYPE aesl-source>
+<network>
+
+
+<!--list of global events-->
+
+
+<!--list of constants-->
+
+
+<!--show keywords state-->
+<keywords flag="true"/>
+
+
+<!--node thymio-II-->
+<node nodeId="1" name="thymio-II"># variables for state
+var state[4] = [0,0,0,0]
+var new_state[4] = [0,0,0,0]
+
+# sound pause
+var sound_pause = 2000
+
+# variables for notes
+var notes[6]
+var durations[6]
+var note_index = 6
+var note_count = 6
+var wave[142]
+var i
+var wave_phase
+var wave_intensity
+
+# compute a sinus wave for sound
+for i in 0:141 do
+	wave_phase = (i-70)*468
+	call math.cos(wave_intensity, wave_phase)
+	wave[i] = wave_intensity/256
+end
+call sound.wave(wave)
+# stop timer 0
+timer.period[0] = 0
+# launch timer 1 for making a sound mark every second
+timer.period[1] = sound_pause
+
+# reset outputs
+call sound.system(-1)
+call leds.top(0,0,0)
+call leds.bottom.left(0,0,0)
+call leds.bottom.right(0,0,0)
+call leds.circle(0,0,0,0,0,0,0,0)
+
+# subroutine to display the current state
+sub display_state
+	call leds.circle(0,state[1]*32,0,state[3]*32,0,state[2]*32,0,state[0]*32)
+
+# when a note is finished, play the next note
+onevent sound.finished
+	if note_index != note_count then
+		call sound.freq(notes[note_index], durations[note_index])
+		note_index += 1
+	end
+
+onevent buttons
+	when button.forward == 1 do
+		motor.left.target = 100
+		motor.right.target = 100
+	end
+	when button.center == 1 do
+		motor.left.target = 0
+		motor.right.target = 0
+	end
+
+	call math.copy(state, new_state)
+	callsub display_state
+
+onevent prox
+	when prox.ground.delta[0] &lt; 325 do
+		timer.period[1] = 0 # Disable the sound maker to make a clear sound message
+		motor.left.target = 300
+		motor.right.target = -300
+		timer.period[0] = 1500
+		call math.copy(notes[0:5], [262, 524, 262, 524, 262, 524])
+		call math.copy(durations[0:5], [14, 14, 14, 14, 14, 14])
+		note_index = 1
+		note_count = 6
+		call sound.freq(notes[0], durations[0])
+		
+	end
+	when prox.ground.delta[1] &lt; 325 do
+		timer.period[1] = 0
+		motor.left.target = -300
+		motor.right.target = 300
+		timer.period[0] = 1500
+		call math.copy(notes[0:5], [262, 524, 262, 524, 262, 524])
+		call math.copy(durations[0:5], [14, 14, 14, 14, 14, 14])
+		note_index = 1
+		note_count = 6
+		call sound.freq(notes[0], durations[0])
+		
+	end
+	when prox.horizontal[0] > 200 do
+		timer.period[1] = 0
+		motor.left.target = 0
+	    motor.right.target = 0
+		call math.copy(notes[0:5], [524, 524, 262, 262, 262, 262])
+		call math.copy(durations[0:5], [14, 14, 24, 24, 24, 24])
+		note_index = 1
+		note_count = 6
+		call sound.freq(notes[0], durations[0])
+		
+	end
+	when prox.horizontal[2] > 200 do
+		timer.period[1] = 0
+		motor.left.target = 0
+	    motor.right.target = 0
+		call math.copy(notes[0:5], [262, 262, 524, 524, 262, 262])
+		call math.copy(durations[0:5], [24, 24, 14, 14, 24, 24])
+		note_index = 1
+		note_count = 6
+		call sound.freq(notes[0], durations[0])
+		
+	end
+	when prox.horizontal[4] > 200 do
+		timer.period[1] = 0
+		motor.left.target = 0
+	    motor.right.target = 0
+		call math.copy(notes[0:5], [262, 262, 262, 262, 524, 524])
+		call math.copy(durations[0:5], [24, 24, 24, 24, 14, 14])
+		note_index = 1
+		note_count = 6
+		call sound.freq(notes[0], durations[0])
+		
+	end
+
+	call math.copy(state, new_state)
+	callsub display_state
+
+onevent timer0
+	timer.period[0] = 0
+	motor.left.target = 200
+	motor.right.target = 200
+
+	call math.copy(state, new_state)
+	callsub display_state
+	
+onevent timer1
+	timer.period[1] = sound_pause
+	call math.copy(notes[0:5], [262, 524, 262, 524, 262, 524])
+	call math.copy(durations[0:5], [1, 1, 1, 1, 1, 1])
+	note_index = 1
+	note_count = 6
+	call sound.freq(notes[0], durations[0])
+
+onevent rc5
+	timer.period[1] = sound_pause
+	if rc5.command == 80 then
+	    motor.left.target = 600
+	    motor.right.target = 600
+	elseif rc5.command == 81 then
+		call sound.system(2)
+	    motor.left.target = -100
+	    motor.right.target = -100
+	elseif rc5.command == 85 then
+		call sound.system(2)
+	    motor.left.target = -100
+	    motor.right.target = 100
+	elseif rc5.command == 86 then
+	    motor.left.target = 100
+	    motor.right.target = -100
+	else
+	    motor.left.target = 0
+	    motor.right.target = 0
+	end
+	</node>
+
+
+</network>
